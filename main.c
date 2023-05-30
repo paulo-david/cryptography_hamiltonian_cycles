@@ -144,11 +144,6 @@ void encryption (char plain_text[MAX_TEXT_SIZE]){
         }
     }
 
-    // Adds ones to the main diagonal
-    for(int i = 1; i < n; i++){
-            gsl_matrix_set(A, i, i, 1);
-    }
-
     print_matrix(A, "matriz A >>>");
 
     // Calculate the matrix B
