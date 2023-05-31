@@ -13,7 +13,7 @@ bool is_string_valid (char *);
 bool is_consonant (char );
 void print_matrix (gsl_matrix *, char *);
 void encryption (char *);
-void decryption ();
+void decryption (int *, int);
 
 // declaring global variables
 int n = 0;
@@ -40,13 +40,39 @@ int main()
         return 1;
     }
 
-    encryption(plain_text);
+    char non_repeated_str[29];
+    int repeated_str[504];
+
+    int nr_size = 0;
+    int  r_size = 0;
+    for ( ;n < MAX_TEXT_SIZE && plain_text[n] != '\n'; n++){
+        bool is_repeated = false;
+        for(int j = 0; j < nr_size; j++){
+            if(non_repeated_str[j] == plain_text[n]){
+                is_repeated = true;
+                break;
+            }
+        }
+
+        if (is_repeated){
+            repeated_str[r_size] = n;
+            repeated_str[r_size +1] = plain_text[n] +n;
+            r_size += 2;
+        } else {
+            non_repeated_str[nr_size] = plain_text[n];
+            nr_size++;
+        }
+    }
+    non_repeated_str[nr_size] = '\n';
+    n = nr_size;
+
+    encryption(non_repeated_str);
 
     gsl_matrix_set_all(C1, 0);
     gsl_matrix_set_all(N, 0);
     gsl_matrix_set_all(B, 0);
 
-    decryption();
+    decryption(repeated_str, r_size/2);
 
     gsl_matrix_free(A);
     gsl_matrix_free(B);
@@ -97,18 +123,24 @@ void print_matrix (gsl_matrix * matrix, char * title){
 
 void encryption (char plain_text[MAX_TEXT_SIZE]){
 
+    // Check if the message has 3 distinc characters minimum
+    if (n < 3){
+        printf("The plain text should have at least 3 distinc characters\n");
+        exit(2);
+    }
+
     // Translate the plain_text to an string of numbers
     int coded_plain_text[MAX_TEXT_SIZE];
-    for ( ;n < MAX_TEXT_SIZE && plain_text[n] != '\n'; n++){
+    for(int i = 0; i < n; i++){
 
-        char letter = plain_text[n];
+        char letter = plain_text[i];
 
         // Handle corner cases when the character is space or an dot
         if(letter == ' '){
-            coded_plain_text[n] = 105;
+            coded_plain_text[i] = 105;
             continue;
         } else if(letter == '.'){
-            coded_plain_text[n] = 106;
+            coded_plain_text[i] = 106;
             continue;
         }
 
@@ -121,16 +153,10 @@ void encryption (char plain_text[MAX_TEXT_SIZE]){
 
         // Set the final value of the translation [A-Z] -> number
         if (is_consonant(letter)){
-            coded_plain_text[n] = column*10 + row;
+            coded_plain_text[i] = column*10 + row;
         } else{
-            coded_plain_text[n] = row*10 + column;
+            coded_plain_text[i] = row*10 + column;
         }
-    }
-
-    // Check if the message has 3 characters minimum
-    if (n < 3){
-        printf("The plain text should have at least 3 characters\n");
-        exit(2);
     }
 
     // Generate matrix A
@@ -268,7 +294,7 @@ void encryption (char plain_text[MAX_TEXT_SIZE]){
 }
 
 
-void decryption (){
+void decryption (int * repeated_letters, int size){
 
     // Obtein matrix C1
     C1 = gsl_matrix_alloc(n, n);
@@ -324,10 +350,20 @@ void decryption (){
 
     printf("\nMensagem decodificada: ");
 
+    int count_repeated_letters = 0;
     // Print the decoded message
-    for(int i = 0; i < n; i++)
-        printf("%c", (int)round(gsl_matrix_get(B, i, i)));
+    for(int i = 0, max = n + size; i < max; i++){
 
+        int idx_value = repeated_letters[count_repeated_letters*2];
+        if (i == idx_value){
+            printf("%c", repeated_letters[(count_repeated_letters*2)+1] -idx_value);
+            count_repeated_letters++;
+        }
+        else
+            printf("%c", (int)round(gsl_matrix_get(B, i-count_repeated_letters, i-count_repeated_letters)));
+    }
+
+    printf("\n\n\n");
 
     gsl_matrix_free(inverse_K);
     gsl_matrix_free(inverse_A);
